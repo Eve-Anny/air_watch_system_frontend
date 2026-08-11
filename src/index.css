@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-feature-settings: "tnum" 0;
+  /* Subtle atmospheric wash (sky-blue tint fading into the page background) - an "air/sky" brand
+     touch behind the whole app, faint enough to never compete with card content or chart colors. */
+  background-image: radial-gradient(ellipse 1200px 500px at 50% -10%, rgba(42, 120, 214, 0.06), transparent);
+  background-attachment: fixed;
+}
