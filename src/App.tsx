@@ -8,6 +8,7 @@ import { AlertsPanel } from "./components/AlertsPanel";
 import { ForecastPanel } from "./components/ForecastPanel";
 import { MeasurementsTable } from "./components/MeasurementsTable";
 import { ManualReadingForm } from "./components/ManualReadingForm";
+import { DateRangePicker, type DateRange } from "./components/DateRangePicker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import {
   useActiveAlerts,
@@ -23,7 +24,10 @@ export default function App() {
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
   const [tablePage, setTablePage] = useState(0);
   const [showArchived, setShowArchived] = useState(false);
-  const [trendRangeHours, setTrendRangeHours] = useState(24);
+  const [dateRange, setDateRange] = useState<DateRange>(() => ({
+    startDate: new Date().toLocaleDateString("en-CA"),
+    endDate: "",
+  }));
 
   // Auto-select the first device once the list loads, if nothing's selected yet.
   useEffect(() => {
@@ -39,9 +43,15 @@ export default function App() {
 
   const status = useStatus(selectedDeviceId);
   const alerts = useActiveAlerts(selectedDeviceId);
-  const readings = useHistoricalReadings(selectedDeviceId, trendRangeHours);
+  const startDate = dateRange.startDate || new Date().toLocaleDateString("en-CA");
+  const endDate = dateRange.endDate || startDate;
+  const readingDates = {
+    start: new Date(`${startDate}T00:00:00`).toISOString(),
+    end: new Date(`${endDate}T23:59:59.999`).toISOString(),
+  };
+  const readings = useHistoricalReadings(selectedDeviceId, readingDates);
   const forecast = useForecast(selectedDeviceId, 6);
-  const measurementsPage = usePaginatedReadings(selectedDeviceId, tablePage, 10, showArchived);
+  const measurementsPage = usePaginatedReadings(selectedDeviceId, tablePage, 10, showArchived, readingDates);
 
   const activeAlertCount = alerts.data?.length ?? 0;
 
@@ -54,6 +64,11 @@ export default function App() {
 
   function handleToggleShowArchived(show: boolean) {
     setShowArchived(show);
+    setTablePage(0);
+  }
+
+  function handleDateRangeChange(nextRange: DateRange) {
+    setDateRange(nextRange);
     setTablePage(0);
   }
 
@@ -83,7 +98,7 @@ export default function App() {
           </TabsList>
 
           <TabsContent value="trend" className="space-y-4">
-            <TrendChart readings={readings} rangeHours={trendRangeHours} onRangeChange={setTrendRangeHours} />
+            <TrendChart readings={readings} dateRange={dateRange} datePicker={<DateRangePicker value={dateRange} onChange={handleDateRangeChange} />} />
             <MeasurementsTable
               readings={measurementsPage}
               page={tablePage}

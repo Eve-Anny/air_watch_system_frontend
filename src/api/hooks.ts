@@ -89,29 +89,26 @@ export function useActiveAlerts(deviceId: string | null): PolledResource<Alert[]
   );
 }
 
-export const TREND_RANGE_OPTIONS = [
-  { label: "24h", hours: 24 },
-  { label: "3d", hours: 24 * 3 },
-  { label: "7d", hours: 24 * 7 },
-  { label: "14d", hours: 24 * 14 },
-  { label: "30d", hours: 24 * 30 },
-] as const;
+export interface ReadingDateRange {
+  start: string;
+  end: string;
+}
 
-export function useHistoricalReadings(deviceId: string | null, hours = 24): PolledResource<Reading[]> {
+export function useHistoricalReadings(deviceId: string | null, dateRange: ReadingDateRange): PolledResource<Reading[]> {
   return usePolledResource(
     async () => {
       if (!deviceId) return [];
-      const start = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
       const envelope = await api.get<Envelope<Reading[]>>("/api/v1/readings", {
         device_id: deviceId,
-        start,
+        start: dateRange.start,
+        end: dateRange.end,
         limit: 1000, // backend's max (readings router) - headroom for longer-range selections
       });
       // API returns newest-first (§ readings router sort); charts read chronologically.
       return [...envelope.data].reverse();
     },
     POLL_INTERVAL_MS.history,
-    [deviceId, hours],
+    [deviceId, dateRange.start, dateRange.end],
   );
 }
 
@@ -130,6 +127,7 @@ export function usePaginatedReadings(
   page: number,
   pageSize: number,
   archivedOnly = false,
+  dateRange?: ReadingDateRange,
 ): PolledResource<ReadingsPage> {
   return usePolledResource(
     async () => {
@@ -139,11 +137,13 @@ export function usePaginatedReadings(
         limit: pageSize,
         skip: page * pageSize,
         archived_only: archivedOnly ? "true" : undefined,
+        start: dateRange?.start,
+        end: dateRange?.end,
       });
       return { rows: envelope.data, total: envelope.meta.total ?? envelope.data.length };
     },
     POLL_INTERVAL_MS.history,
-    [deviceId, page, pageSize, archivedOnly],
+    [deviceId, page, pageSize, archivedOnly, dateRange?.start, dateRange?.end],
   );
 }
 
