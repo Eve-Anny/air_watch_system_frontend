@@ -12,22 +12,25 @@ interface Props {
 }
 
 const HEADERS = [
-  "timestamp", "device_id", "category", "dominant_pollutant", "co_mg_m3", "pm2_5_ug_m3",
-  "pm10_ug_m3", "voc_index", "temperature_c", "humidity_pct", "pressure_hpa",
-  "co_who_ratio", "pm2_5_who_ratio", "pm10_who_ratio",
+  "id", "timestamp", "received_at", "device_id", "archived", "category", "dominant_pollutant",
+  "co_mg_m3", "pm1_0_ug_m3", "pm2_5_ug_m3", "pm10_ug_m3", "voc_index", "temperature_c", "humidity_pct", "pressure_hpa",
+  "co_mg_m3_15min", "co_mg_m3_1h", "pm2_5_ug_m3_24h", "pm10_ug_m3_24h", "voc_index_1h",
+  "co_who_ratio", "pm2_5_who_ratio", "pm10_who_ratio", "voc_who_ratio",
 ];
 
-function csvValue(value: string | number | null | undefined) {
+function csvValue(value: string | number | boolean | null | undefined) {
   const text = value == null ? "" : String(value);
   return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 
 function toCsv(readings: Reading[]) {
   const rows = readings.map((reading) => [
-    reading.timestamp, reading.device_id, reading.category, reading.dominant_pollutant,
-    reading.raw.co_mg_m3, reading.raw.pm2_5_ug_m3, reading.raw.pm10_ug_m3, reading.raw.voc_index,
+    reading.id, reading.timestamp, reading.received_at, reading.device_id, reading.archived ?? false, reading.category, reading.dominant_pollutant,
+    reading.raw.co_mg_m3, reading.raw.pm1_0_ug_m3, reading.raw.pm2_5_ug_m3, reading.raw.pm10_ug_m3, reading.raw.voc_index,
     reading.raw.temperature_c, reading.raw.humidity_pct, reading.raw.pressure_hpa,
-    reading.who_scores.co.ratio, reading.who_scores.pm2_5.ratio, reading.who_scores.pm10.ratio,
+    reading.rolling_averages.co_mg_m3_15min, reading.rolling_averages.co_mg_m3_1h,
+    reading.rolling_averages.pm2_5_ug_m3_24h, reading.rolling_averages.pm10_ug_m3_24h, reading.rolling_averages.voc_index_1h,
+    reading.who_scores.co.ratio, reading.who_scores.pm2_5.ratio, reading.who_scores.pm10.ratio, reading.who_scores.voc.ratio,
   ].map(csvValue).join(","));
   return [HEADERS.join(","), ...rows].join("\r\n");
 }
@@ -51,6 +54,7 @@ export function ExportReadingsButton({ deviceId, dateRange, rangeLabel }: Props)
           end: dateRange.end,
           limit: pageSize,
           skip,
+          include_archived: "true",
         });
         allReadings.push(...response.data);
         if (allReadings.length >= (response.meta.total ?? 0) || response.data.length < pageSize) break;
@@ -77,8 +81,8 @@ export function ExportReadingsButton({ deviceId, dateRange, rangeLabel }: Props)
     {isOpen && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="presentation">
       <section role="dialog" aria-modal="true" aria-labelledby="export-title" className="w-full max-w-md rounded-lg border border-border bg-card p-5 shadow-lg">
         <h2 id="export-title" className="text-base font-semibold text-foreground">Export measurements</h2>
-        <p className="mt-2 text-sm text-muted-foreground">Download all active measurements for <span className="font-medium text-foreground">{rangeLabel}</span> as a CSV file?</p>
-        <p className="mt-1 text-xs text-muted-foreground">The export includes readings beyond the rows currently visible in the table.</p>
+        <p className="mt-2 text-sm text-muted-foreground">Download every measurement for <span className="font-medium text-foreground">{rangeLabel}</span> as a CSV file?</p>
+        <p className="mt-1 text-xs text-muted-foreground">This includes every day between the selected dates, all fields, archived readings, and rows beyond the current table page.</p>
         {error && <p className="mt-3 text-sm text-destructive" role="alert">{error}</p>}
         <div className="mt-5 flex justify-end gap-2">
           <Button variant="outline" size="sm" onClick={() => { setIsOpen(false); setError(null); }} disabled={exporting}>Cancel</Button>
