@@ -9,6 +9,7 @@ import { ForecastPanel } from "./components/ForecastPanel";
 import { MeasurementsTable } from "./components/MeasurementsTable";
 import { ManualReadingForm } from "./components/ManualReadingForm";
 import { DateRangePicker, type DateRange } from "./components/DateRangePicker";
+import { ExportReadingsButton } from "./components/ExportReadingsButton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import {
   useActiveAlerts,
@@ -98,6 +99,13 @@ export default function App() {
           </TabsList>
 
           <TabsContent value="trend" className="space-y-4">
+            <div className="flex justify-end">
+              <ExportReadingsButton
+                deviceId={selectedDeviceId}
+                dateRange={readingDates}
+                rangeLabel={dateRange.endDate ? `${dateRange.startDate} to ${dateRange.endDate}` : dateRange.startDate}
+              />
+            </div>
             <TrendChart readings={readings} dateRange={dateRange} datePicker={<DateRangePicker value={dateRange} onChange={handleDateRangeChange} />} />
             <MeasurementsTable
               readings={measurementsPage}
